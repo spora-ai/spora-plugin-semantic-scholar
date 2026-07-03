@@ -16,12 +16,12 @@
   },
   "autoload": {
     "psr-4": {
-      "Spora\\\\Plugins\\\\SemanticScholar\\\\": "src/"
+      "Spora\\Plugins\\SemanticScholar\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Spora\\\\Plugins\\\\SemanticScholar\\\\Tests\\\\": "tests/"
+      "Spora\\Plugins\\SemanticScholar\\Tests\\": "tests/"
     }
   },
   "scripts": {
