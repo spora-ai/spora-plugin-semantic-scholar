@@ -13,32 +13,47 @@ const SCHOLAR_TRANSFORMER_TITLE = 'Attention is All You Need';
 const SCHOLAR_TRANSFORMER_AUTHOR = 'Ashish Vaswani';
 const SCHOLAR_TRANSFORMER_DOI = '10.48550/arXiv.1706.03762';
 
-beforeEach(function () {
-    $this->config = Mockery::mock(ToolConfigService::class);
-    $this->client = Mockery::mock(HttpClientInterface::class);
-    $this->tool = new SemanticScholarTool($this->config, $this->client);
-});
+/**
+ * Build a fresh SemanticScholarTool with real config + http-client mocks.
+ * Returns [$config, $client, $tool]. PHPStan-friendly: every test gets a
+ * locally-typed $tool without relying on Pest's dynamic $this->.
+ *
+ * @return array{0: ToolConfigService&Mockery\MockInterface, 1: HttpClientInterface&Mockery\MockInterface, 2: SemanticScholarTool}
+ */
+function makeScholarTool(): array
+{
+    $config = Mockery::mock(ToolConfigService::class);
+    $client = Mockery::mock(HttpClientInterface::class);
+    return [$config, $client, new SemanticScholarTool($config, $client)];
+}
 
 it('returns error if query is empty on paper_search', function () {
-    $result = $this->tool->execute(['action' => 'paper_search', 'query' => ''], 1);
+    [, , $tool] = makeScholarTool();
+
+    $result = $tool->execute(['action' => 'paper_search', 'query' => ''], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('query cannot be empty');
 });
 
 it('returns error if paper_id is missing', function (string $action) {
-    $result = $this->tool->execute(['action' => $action, 'paper_id' => ''], 1);
+    [, , $tool] = makeScholarTool();
+
+    $result = $tool->execute(['action' => $action, 'paper_id' => ''], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain(SCHOLAR_PAPER_ID_REQUIRED);
 })->with(['get_paper', 'get_citations', 'get_references', 'get_recommendations']);
 
 it('returns error for unknown action', function () {
-    $result = $this->tool->execute(['action' => 'unknown_action'], 1);
+    [, , $tool] = makeScholarTool();
+
+    $result = $tool->execute(['action' => 'unknown_action'], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain("Unknown action 'unknown_action'");
 });
 
 it('paper_search makes correct HTTP request and parses response', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -70,13 +85,13 @@ it('paper_search makes correct HTTP request and parses response', function () {
         ],
     ]);
 
-    $this->client->expects('request')->with('GET', 'https://api.semanticscholar.org/graph/v1/paper/search', Mockery::on(function ($options) {
+    $client->expects('request')->with('GET', 'https://api.semanticscholar.org/graph/v1/paper/search', Mockery::on(function ($options) {
         return $options['query']['query'] === 'transformer attention'
             && $options['query']['limit'] === 10
             && str_contains($options['query']['fields'], 'title');
     }))->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'paper_search', 'query' => 'transformer attention'], 1);
+    $result = $tool->execute(['action' => 'paper_search', 'query' => 'transformer attention'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('PAPER SEARCH RESULTS')
         ->and($result->content)->toContain(SCHOLAR_TRANSFORMER_TITLE)
@@ -88,21 +103,23 @@ it('paper_search makes correct HTTP request and parses response', function () {
 });
 
 it('paper_search returns empty message when no results', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
 
-    $this->client->expects('request')->andReturn($response);
+    $client->expects('request')->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'paper_search', 'query' => 'xyznonexistent'], 1);
+    $result = $tool->execute(['action' => 'paper_search', 'query' => 'xyznonexistent'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('No papers found');
 });
 
 it('get_paper fetches paper metadata by ID', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -118,18 +135,19 @@ it('get_paper fetches paper metadata by ID', function () {
         'openAccessPdf' => ['url' => 'https://arxiv.org/pdf/1706.03762'],
     ]);
 
-    $this->client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
+    $client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
         return str_contains($options['query']['fields'], 'title');
     }))->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'get_paper', 'paper_id' => 'ArXiv:1706.03762'], 1);
+    $result = $tool->execute(['action' => 'get_paper', 'paper_id' => 'ArXiv:1706.03762'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('PAPER DETAILS')
         ->and($result->content)->toContain(SCHOLAR_TRANSFORMER_TITLE);
 });
 
 it('get_citations returns citing papers with pagination', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -149,19 +167,20 @@ it('get_citations returns citing papers with pagination', function () {
         ],
     ]);
 
-    $this->client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
+    $client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
         return $options['query']['limit'] === 20
             && $options['query']['offset'] === 0;
     }))->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'get_citations', 'paper_id' => 'abc123'], 1);
+    $result = $tool->execute(['action' => 'get_citations', 'paper_id' => 'abc123'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('CITATIONS OF')
         ->and($result->content)->toContain('Alec Radford');
 });
 
 it('get_references returns referenced papers', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -181,16 +200,17 @@ it('get_references returns referenced papers', function () {
         ],
     ]);
 
-    $this->client->expects('request')->andReturn($response);
+    $client->expects('request')->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'get_references', 'paper_id' => 'abc123'], 1);
+    $result = $tool->execute(['action' => 'get_references', 'paper_id' => 'abc123'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('REFERENCES OF')
         ->and($result->content)->toContain('Ilya Sutskever');
 });
 
 it('get_recommendations returns recommended papers', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
@@ -209,27 +229,28 @@ it('get_recommendations returns recommended papers', function () {
         ],
     ]);
 
-    $this->client->expects('request')->andReturn($response);
+    $client->expects('request')->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'get_recommendations', 'paper_id' => 'abc123'], 1);
+    $result = $tool->execute(['action' => 'get_recommendations', 'paper_id' => 'abc123'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('RECOMMENDED PAPERS')
         ->and($result->content)->toContain('Yoav Goldberg');
 });
 
 it('handles HTTP error codes gracefully', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(429);
     $response->allows('getContent')->andReturn('Rate limit exceeded');
 
-    $this->client->expects('request')->andReturn($response);
+    $client->expects('request')->andReturn($response);
     $logger = Mockery::mock(LoggerInterface::class);
     $logger->allows('error');
     $logger->allows('debug');
 
-    $tool = new SemanticScholarTool($this->config, $this->client, $logger);
+    $tool = new SemanticScholarTool($config, $client, $logger);
 
     $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1);
     expect($result->success)->toBeFalse()
@@ -237,7 +258,8 @@ it('handles HTTP error codes gracefully', function () {
 });
 
 it('handles HTTP timeout from settings', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([
         'core.semantic_scholar.http_timeout' => '60',
     ]);
 
@@ -245,27 +267,28 @@ it('handles HTTP timeout from settings', function () {
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
 
-    $this->client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
+    $client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
         return $options['timeout'] === 60;
     }))->andReturn($response);
 
-    $result = $this->tool->execute(['action' => 'paper_search', 'query' => 'test'], 1);
+    $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1);
     expect($result->success)->toBeTrue();
 });
 
 it('paper_search respects open_access_only and year filters', function () {
-    $this->config->allows('getEffectiveSettings')->andReturn([]);
+    [$config, $client, $tool] = makeScholarTool();
+    $config->allows('getEffectiveSettings')->andReturn([]);
 
     $response = Mockery::mock(ResponseInterface::class);
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
 
-    $this->client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
+    $client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
         return $options['query']['year'] === '2023'
             && $options['query']['openAccessPdf'] === 'true';
     }))->andReturn($response);
 
-    $result = $this->tool->execute([
+    $result = $tool->execute([
         'action' => 'paper_search',
         'query' => 'test',
         'year' => '2023',
