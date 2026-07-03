@@ -167,44 +167,22 @@ final class SemanticScholarTool extends AbstractTool
 
     public function getCitations(array $arguments, int $agentId, ?int $userId): ToolResult
     {
-        $paperId = trim((string) ($arguments['paper_id'] ?? ''));
-        if ($paperId === '') {
-            return new ToolResult(false, self::ERR_PAPER_ID_REQUIRED);
-        }
-
-        $limit = min(100, max(1, (int) ($arguments['limit'] ?? 20)));
-        $offset = max(0, (int) ($arguments['offset'] ?? 0));
-
-        $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
-
-        $url = self::BASE_URL . self::GRAPH_PAPER_PATH . urlencode($paperId) . '/citations';
-        $query = [
-            'limit' => $limit,
-            'offset' => $offset,
-            'fields' => self::GRAPH_FIELDS,
-        ];
-        $error = $this->performRequest($url, $query, $settings);
-        if ($error !== null) {
-            return $error;
-        }
-
-        $data = $this->lastResponseData;
-        $citations = $data['data'] ?? [];
-        $total = $data['total'] ?? 0;
-
-        $output = ($citations === [])
-            ? "No citations found for paper '{$paperId}'."
-            : $this->buildCitationsOutput($paperId, $total, $citations, $offset, 'citingPaper');
-
-        return new ToolResult(true, $output, [
-            'paper_id' => $paperId,
-            'total' => $total,
-            'returned' => count($citations),
-            'offset' => $offset,
-        ]);
+        return $this->fetchPaperRelations($arguments, $agentId, $userId, '/citations', 'citingPaper', 'CITATIONS', 'No citations found');
     }
 
     public function getReferences(array $arguments, int $agentId, ?int $userId): ToolResult
+    {
+        return $this->fetchPaperRelations($arguments, $agentId, $userId, '/references', 'citedPaper', 'REFERENCES', 'No references found');
+    }
+
+    /**
+     * Shared implementation for getCitations and getReferences. The two
+     * endpoints differ only in URL suffix, entry key, label, and empty-state
+     * message — the rest (limit/offset/fields/pagination) is identical.
+     *
+     * @return ToolResult
+     */
+    private function fetchPaperRelations(array $arguments, int $agentId, ?int $userId, string $urlSuffix, string $entryKey, string $label, string $emptyMessage): ToolResult
     {
         $paperId = trim((string) ($arguments['paper_id'] ?? ''));
         if ($paperId === '') {
@@ -216,7 +194,7 @@ final class SemanticScholarTool extends AbstractTool
 
         $settings = $this->configService->getEffectiveSettings(static::class, $agentId, $userId);
 
-        $url = self::BASE_URL . self::GRAPH_PAPER_PATH . urlencode($paperId) . '/references';
+        $url = self::BASE_URL . self::GRAPH_PAPER_PATH . urlencode($paperId) . $urlSuffix;
         $query = [
             'limit' => $limit,
             'offset' => $offset,
@@ -228,17 +206,17 @@ final class SemanticScholarTool extends AbstractTool
         }
 
         $data = $this->lastResponseData;
-        $references = $data['data'] ?? [];
+        $entries = $data['data'] ?? [];
         $total = $data['total'] ?? 0;
 
-        $output = ($references === [])
-            ? "No references found for paper '{$paperId}'."
-            : $this->buildCitationsOutput($paperId, $total, $references, $offset, 'citedPaper');
+        $output = ($entries === [])
+            ? "{$emptyMessage} for paper '{$paperId}'."
+            : $this->buildCitationsOutput($paperId, $total, $entries, $offset, $entryKey, $label);
 
         return new ToolResult(true, $output, [
             'paper_id' => $paperId,
             'total' => $total,
-            'returned' => count($references),
+            'returned' => count($entries),
             'offset' => $offset,
         ]);
     }
@@ -341,9 +319,8 @@ final class SemanticScholarTool extends AbstractTool
     /**
      * @param list<array<string, mixed>> $entries
      */
-    private function buildCitationsOutput(string $paperId, int $total, array $entries, int $offset, string $entryKey): string
+    private function buildCitationsOutput(string $paperId, int $total, array $entries, int $offset, string $entryKey, string $label): string
     {
-        $label = $entryKey === 'citingPaper' ? 'CITATIONS' : 'REFERENCES';
         $output = "{$label} OF {$paperId} ({$total} total, showing " . count($entries) . " from offset {$offset})\n\n";
         foreach ($entries as $i => $entry) {
             $num = $i + 1;
