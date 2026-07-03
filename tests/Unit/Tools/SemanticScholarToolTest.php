@@ -13,73 +13,34 @@ const SCHOLAR_TRANSFORMER_TITLE = 'Attention is All You Need';
 const SCHOLAR_TRANSFORMER_AUTHOR = 'Ashish Vaswani';
 const SCHOLAR_TRANSFORMER_DOI = '10.48550/arXiv.1706.03762';
 
-it('returns error if query is empty on paper_search', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $client = Mockery::mock(HttpClientInterface::class);
-    $tool = new SemanticScholarTool($config, $client);
+beforeEach(function () {
+    $this->config = Mockery::mock(ToolConfigService::class);
+    $this->client = Mockery::mock(HttpClientInterface::class);
+    $this->tool = new SemanticScholarTool($this->config, $this->client);
+});
 
-    $result = $tool->execute(['action' => 'paper_search', 'query' => ''], 1);
+it('returns error if query is empty on paper_search', function () {
+    $result = $this->tool->execute(['action' => 'paper_search', 'query' => ''], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain('query cannot be empty');
 });
 
-it('returns error if paper_id is missing on get_paper', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $client = Mockery::mock(HttpClientInterface::class);
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_paper', 'paper_id' => ''], 1);
+it('returns error if paper_id is missing', function (string $action) {
+    $result = $this->tool->execute(['action' => $action, 'paper_id' => ''], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain(SCHOLAR_PAPER_ID_REQUIRED);
-});
-
-it('returns error if paper_id is missing on get_citations', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $client = Mockery::mock(HttpClientInterface::class);
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_citations', 'paper_id' => ''], 1);
-    expect($result->success)->toBeFalse()
-        ->and($result->content)->toContain(SCHOLAR_PAPER_ID_REQUIRED);
-});
-
-it('returns error if paper_id is missing on get_references', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $client = Mockery::mock(HttpClientInterface::class);
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_references', 'paper_id' => ''], 1);
-    expect($result->success)->toBeFalse()
-        ->and($result->content)->toContain(SCHOLAR_PAPER_ID_REQUIRED);
-});
-
-it('returns error if paper_id is missing on get_recommendations', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $client = Mockery::mock(HttpClientInterface::class);
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_recommendations', 'paper_id' => ''], 1);
-    expect($result->success)->toBeFalse()
-        ->and($result->content)->toContain(SCHOLAR_PAPER_ID_REQUIRED);
-});
+})->with(['get_paper', 'get_citations', 'get_references', 'get_recommendations']);
 
 it('returns error for unknown action', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $client = Mockery::mock(HttpClientInterface::class);
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'unknown_action'], 1);
+    $result = $this->tool->execute(['action' => 'unknown_action'], 1);
     expect($result->success)->toBeFalse()
         ->and($result->content)->toContain("Unknown action 'unknown_action'");
 });
 
 it('paper_search makes correct HTTP request and parses response', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn([
         'total' => 2,
@@ -109,15 +70,13 @@ it('paper_search makes correct HTTP request and parses response', function () {
         ],
     ]);
 
-    $client->expects('request')->with('GET', 'https://api.semanticscholar.org/graph/v1/paper/search', Mockery::on(function ($options) {
+    $this->client->expects('request')->with('GET', 'https://api.semanticscholar.org/graph/v1/paper/search', Mockery::on(function ($options) {
         return $options['query']['query'] === 'transformer attention'
             && $options['query']['limit'] === 10
             && str_contains($options['query']['fields'], 'title');
     }))->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'paper_search', 'query' => 'transformer attention'], 1);
+    $result = $this->tool->execute(['action' => 'paper_search', 'query' => 'transformer attention'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('PAPER SEARCH RESULTS')
         ->and($result->content)->toContain(SCHOLAR_TRANSFORMER_TITLE)
@@ -129,31 +88,23 @@ it('paper_search makes correct HTTP request and parses response', function () {
 });
 
 it('paper_search returns empty message when no results', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
 
-    $client->expects('request')->andReturn($response);
+    $this->client->expects('request')->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'paper_search', 'query' => 'xyznonexistent'], 1);
+    $result = $this->tool->execute(['action' => 'paper_search', 'query' => 'xyznonexistent'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('No papers found');
 });
 
 it('get_paper fetches paper metadata by ID', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn([
         'title' => SCHOLAR_TRANSFORMER_TITLE,
@@ -167,25 +118,20 @@ it('get_paper fetches paper metadata by ID', function () {
         'openAccessPdf' => ['url' => 'https://arxiv.org/pdf/1706.03762'],
     ]);
 
-    $client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
+    $this->client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
         return str_contains($options['query']['fields'], 'title');
     }))->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_paper', 'paper_id' => 'ArXiv:1706.03762'], 1);
+    $result = $this->tool->execute(['action' => 'get_paper', 'paper_id' => 'ArXiv:1706.03762'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('PAPER DETAILS')
         ->and($result->content)->toContain(SCHOLAR_TRANSFORMER_TITLE);
 });
 
 it('get_citations returns citing papers with pagination', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn([
         'total' => 1,
@@ -203,26 +149,21 @@ it('get_citations returns citing papers with pagination', function () {
         ],
     ]);
 
-    $client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
+    $this->client->expects('request')->with('GET', Mockery::type('string'), Mockery::on(function ($options) {
         return $options['query']['limit'] === 20
             && $options['query']['offset'] === 0;
     }))->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_citations', 'paper_id' => 'abc123'], 1);
+    $result = $this->tool->execute(['action' => 'get_citations', 'paper_id' => 'abc123'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('CITATIONS OF')
         ->and($result->content)->toContain('Alec Radford');
 });
 
 it('get_references returns referenced papers', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn([
         'total' => 1,
@@ -240,23 +181,18 @@ it('get_references returns referenced papers', function () {
         ],
     ]);
 
-    $client->expects('request')->andReturn($response);
+    $this->client->expects('request')->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_references', 'paper_id' => 'abc123'], 1);
+    $result = $this->tool->execute(['action' => 'get_references', 'paper_id' => 'abc123'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('REFERENCES OF')
         ->and($result->content)->toContain('Ilya Sutskever');
 });
 
 it('get_recommendations returns recommended papers', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn([
         'recommendedPapers' => [
@@ -273,32 +209,27 @@ it('get_recommendations returns recommended papers', function () {
         ],
     ]);
 
-    $client->expects('request')->andReturn($response);
+    $this->client->expects('request')->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'get_recommendations', 'paper_id' => 'abc123'], 1);
+    $result = $this->tool->execute(['action' => 'get_recommendations', 'paper_id' => 'abc123'], 1);
     expect($result->success)->toBeTrue()
         ->and($result->content)->toContain('RECOMMENDED PAPERS')
         ->and($result->content)->toContain('Yoav Goldberg');
 });
 
 it('handles HTTP error codes gracefully', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(429);
     $response->allows('getContent')->andReturn('Rate limit exceeded');
 
-    $client->expects('request')->andReturn($response);
+    $this->client->expects('request')->andReturn($response);
     $logger = Mockery::mock(LoggerInterface::class);
     $logger->allows('error');
     $logger->allows('debug');
 
-    $tool = new SemanticScholarTool($config, $client, $logger);
+    $tool = new SemanticScholarTool($this->config, $this->client, $logger);
 
     $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1);
     expect($result->success)->toBeFalse()
@@ -306,45 +237,35 @@ it('handles HTTP error codes gracefully', function () {
 });
 
 it('handles HTTP timeout from settings', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([
+    $this->config->allows('getEffectiveSettings')->andReturn([
         'core.semantic_scholar.http_timeout' => '60',
     ]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
 
-    $client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
+    $this->client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
         return $options['timeout'] === 60;
     }))->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1);
+    $result = $this->tool->execute(['action' => 'paper_search', 'query' => 'test'], 1);
     expect($result->success)->toBeTrue();
 });
 
 it('paper_search respects open_access_only and year filters', function () {
-    $config = Mockery::mock(ToolConfigService::class);
-    $config->allows('getEffectiveSettings')->with(SemanticScholarTool::class, 1, null)->andReturn([]);
+    $this->config->allows('getEffectiveSettings')->andReturn([]);
 
-    $client = Mockery::mock(HttpClientInterface::class);
     $response = Mockery::mock(ResponseInterface::class);
-
     $response->allows('getStatusCode')->andReturn(200);
     $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
 
-    $client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
+    $this->client->expects('request')->with('GET', Mockery::any(), Mockery::on(function ($options) {
         return $options['query']['year'] === '2023'
             && $options['query']['openAccessPdf'] === 'true';
     }))->andReturn($response);
 
-    $tool = new SemanticScholarTool($config, $client);
-
-    $result = $tool->execute([
+    $result = $this->tool->execute([
         'action' => 'paper_search',
         'query' => 'test',
         'year' => '2023',
