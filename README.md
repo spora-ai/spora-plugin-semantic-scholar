@@ -7,31 +7,12 @@ for AI). Free, no API key required; an optional key raises the rate limit.
 ## Installation
 
 ```bash
-# Recommended — install via the Spora CLI
 php bin/spora plugin:install spora-ai/spora-plugin-semantic-scholar
-php bin/spora spora:install   # applies the plugin's migration
-
-# For development against a sibling git clone, pass --path:
-php bin/spora plugin:install spora-ai/spora-plugin-semantic-scholar --path=/abs/path/to/checkout
-
-# Alternative — drop a clone into the Spora repo
-git clone https://github.com/spora-ai/spora-plugin-semantic-scholar.git plugins/semantic-scholar
-php bin/spora spora:install
-
-# Alternative — external path (no Spora checkout changes)
-git clone https://github.com/spora-ai/spora-plugin-semantic-scholar.git /opt/spora-plugins/semantic-scholar
-echo 'SPORA_PLUGINS_PATHS=/opt/spora-plugins/semantic-scholar' >> .env
-php bin/spora spora:install
 ```
 
-After install, the tool is exposed as `semantic_scholar` with five
-operations:
+For local development against a sibling checkout, pass `--path=/abs/path/to/checkout`.
 
-- `semantic-scholar:paper_search` — keyword search
-- `semantic-scholar:get_paper` — full metadata for one paper
-- `semantic-scholar:get_citations` — papers that cite a given paper
-- `semantic-scholar:get_references` — papers referenced by a given paper
-- `semantic-scholar:get_recommendations` — related papers for a given paper
+After install, the tool is exposed as `semantic_scholar` with five operations (see [Per-tool parameters](#per-tool-parameters)).
 
 ## Configuration
 
