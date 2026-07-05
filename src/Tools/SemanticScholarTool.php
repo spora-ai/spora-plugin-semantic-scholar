@@ -31,7 +31,7 @@ use Throwable;
 #[ToolOperation(name: 'get_references', description: 'List papers referenced by a specific paper', enabledByDefault: true, requiresApprovalByDefault: false)]
 #[ToolOperation(name: 'get_recommendations', description: 'Find related or recommended papers for a given paper', enabledByDefault: true, requiresApprovalByDefault: false)]
 #[ToolSetting(
-    key: 'core.semantic_scholar.http_timeout',
+    key: 'http_timeout',
     label: 'HTTP Timeout',
     type: 'text',
     description: 'Seconds before an HTTP request fails (default: 30)',
@@ -257,8 +257,8 @@ final class SemanticScholarTool extends AbstractTool
 
     private function effectiveTimeout(array $settings): int
     {
-        if (isset($settings['core.semantic_scholar.http_timeout']) && (int) $settings['core.semantic_scholar.http_timeout'] > 0) {
-            return (int) $settings['core.semantic_scholar.http_timeout'];
+        if (isset($settings['http_timeout']) && (int) $settings['http_timeout'] > 0) {
+            return (int) $settings['http_timeout'];
         }
         $envTimeout = (int) ($_ENV['SPORA_TOOL_HTTP_TIMEOUT'] ?? getenv('SPORA_TOOL_HTTP_TIMEOUT') ?: 0);
         return $envTimeout > 0 ? $envTimeout : 30;
