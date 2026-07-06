@@ -3,5 +3,5 @@
   "slug": "semantic-scholar",
   "description": "Semantic Scholar academic paper search for Spora agents.",
   "class": "Spora\\Plugins\\SemanticScholar\\SemanticScholarPlugin",
-  "icon": "puzzle"
+  "icon": "lightbulb"
 }
