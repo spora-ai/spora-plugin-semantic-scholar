@@ -24,7 +24,7 @@ cannot be overridden from the UI.
 
 | Setting | Required | Default | Notes |
 |---|---|---|---|
-| `core.semantic_scholar.http_timeout` | no | `30` | Per-request timeout in seconds. Can also be set with the `SPORA_TOOL_HTTP_TIMEOUT` env var. |
+| `http_timeout` | no | `30` | Per-request timeout in seconds. Can also be set with the `SPORA_TOOL_HTTP_TIMEOUT` env var. |
 | API key | no | — | Optional. Sign up at <https://www.semanticscholar.org/product/api> to receive a private key. The free tier works without one; a key raises the per-IP rate limit. |
 
 **Rate limits** (vendor-published, see

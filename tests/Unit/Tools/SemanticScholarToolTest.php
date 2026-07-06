@@ -260,7 +260,7 @@ it('handles HTTP error codes gracefully', function () {
 it('handles HTTP timeout from settings', function () {
     [$config, $client, $tool] = makeScholarTool();
     $config->allows('getEffectiveSettings')->andReturn([
-        'core.semantic_scholar.http_timeout' => '60',
+        'http_timeout' => '60',
     ]);
 
     $response = Mockery::mock(ResponseInterface::class);
