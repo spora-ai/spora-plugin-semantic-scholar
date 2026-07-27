@@ -36,8 +36,8 @@ use Throwable;
     type: 'text',
     description: 'Seconds before an HTTP request fails (default: 30)',
 )]
-#[ToolParameter(name: 'query', type: 'string', description: 'Search query (required for paper_search). E.g. "machine learning protein folding"', required: false)]
-#[ToolParameter(name: 'paper_id', type: 'string', description: 'Semantic Scholar paper ID (40-char hex) or external ID (DOI, ArXiv, PubMed). Required for get_paper, get_citations, get_references, get_recommendations.', required: false)]
+#[ToolParameter(name: 'query', type: 'string', description: 'Search query (required for paper_search). E.g. "machine learning protein folding"', required: ['paper_search'])]
+#[ToolParameter(name: 'paper_id', type: 'string', description: 'Semantic Scholar paper ID (40-char hex) or external ID (DOI, ArXiv, PubMed). Required for get_paper, get_citations, get_references, get_recommendations.', required: ['get_paper', 'get_citations', 'get_references', 'get_recommendations'])]
 #[ToolParameter(name: 'limit', type: 'number', description: 'Maximum number of results (1-100 for search/citations/references, 1-20 for recommendations).', required: false)]
 #[ToolParameter(name: 'offset', type: 'number', description: 'Pagination offset for citations/references results.', required: false)]
 #[ToolParameter(name: 'year', type: 'string', description: 'Year filter for paper_search (e.g. "2023", "2020-2024", "<2020").', required: false)]
