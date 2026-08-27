@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spora\Plugins\SemanticScholar\Tools;
 
 use Psr\Log\LoggerInterface;
+use Spora\Services\PrincipalContext;
 use Spora\Services\ToolConfigService;
 use Spora\Tools\AbstractTool;
 use Spora\Tools\Attributes\Tool;
@@ -64,8 +65,13 @@ final class SemanticScholarTool extends AbstractTool
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
-    public function execute(array $arguments, int $agentId, ?int $userId = null, ?int $taskId = null): ToolResult
-    {
+    public function execute(
+        array $arguments,
+        int $agentId,
+        ?int $userId = null,
+        ?int $taskId = null,
+        ?PrincipalContext $context = null,
+    ): ToolResult {
         $action = $this->getOperationName($arguments);
 
         return match ($action) {
