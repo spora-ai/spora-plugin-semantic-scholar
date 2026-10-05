@@ -65,6 +65,12 @@ final class SemanticScholarTool extends AbstractTool
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
+    /**
+     * @param int|null $userId Deprecated: the owner now comes from
+     *                          `$context->ownerUserId`, which always held this same
+     *                          value. Removed from the interface in core 0.30.0 —
+     *                          read the context instead.
+     */
     public function execute(
         array $arguments,
         int $agentId,
@@ -72,14 +78,16 @@ final class SemanticScholarTool extends AbstractTool
         ?int $taskId = null,
         ?PrincipalContext $context = null,
     ): ToolResult {
+        $ownerId = $context?->ownerUserId;
+
         $action = $this->getOperationName($arguments);
 
         return match ($action) {
-            'paper_search' => $this->paperSearch($arguments, $agentId, $userId),
-            'get_paper' => $this->getPaper($arguments, $agentId, $userId),
-            'get_citations' => $this->getCitations($arguments, $agentId, $userId),
-            'get_references' => $this->getReferences($arguments, $agentId, $userId),
-            'get_recommendations' => $this->getRecommendations($arguments, $agentId, $userId),
+            'paper_search' => $this->paperSearch($arguments, $agentId, $ownerId),
+            'get_paper' => $this->getPaper($arguments, $agentId, $ownerId),
+            'get_citations' => $this->getCitations($arguments, $agentId, $ownerId),
+            'get_references' => $this->getReferences($arguments, $agentId, $ownerId),
+            'get_recommendations' => $this->getRecommendations($arguments, $agentId, $ownerId),
             default => new ToolResult(false, "Unknown action '{$action}'. Valid actions: paper_search, get_paper, get_citations, get_references, get_recommendations."),
         };
     }
