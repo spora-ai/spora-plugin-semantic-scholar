@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Psr\Log\LoggerInterface;
+use Spora\Models\Principal;
 use Spora\Plugins\SemanticScholar\Tools\SemanticScholarTool;
+use Spora\Services\PrincipalContext;
 use Spora\Services\ToolConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -294,5 +296,22 @@ it('paper_search respects open_access_only and year filters', function () {
         'year' => '2023',
         'open_access_only' => true,
     ], 1);
+    expect($result->success)->toBeTrue();
+});
+
+it('scopes the settings lookup to the context owner, not the legacy user id', function () {
+    [$config, $client, $tool] = makeScholarTool();
+    $config->expects('getEffectiveSettings')
+        ->with(SemanticScholarTool::class, 1, 99)
+        ->andReturn([]);
+
+    $response = Mockery::mock(ResponseInterface::class);
+    $response->allows('getStatusCode')->andReturn(200);
+    $response->allows('toArray')->andReturn(['total' => 0, 'data' => []]);
+    $client->allows('request')->andReturn($response);
+
+    $context = new PrincipalContext(7, Principal::TYPE_USER, 99, 42);
+
+    $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1, 42, null, $context);
     expect($result->success)->toBeTrue();
 });
