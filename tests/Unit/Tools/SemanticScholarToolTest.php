@@ -312,6 +312,6 @@ it('scopes the settings lookup to the context owner, not the legacy user id', fu
 
     $context = new PrincipalContext(7, Principal::TYPE_USER, 99, 42);
 
-    $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1, 42, null, $context);
+    $result = $tool->execute(['action' => 'paper_search', 'query' => 'test'], 1, null, $context);
     expect($result->success)->toBeTrue();
 });
