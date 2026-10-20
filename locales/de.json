@@ -1,4 +1,5 @@
 {
   "Semantic Scholar": "Semantic-Scholar",
-  "Seconds before an HTTP request fails (default: 30)": "Sekunden, bis eine HTTP-Anfrage fehlschlägt (Standard: 30)"
+  "Seconds before an HTTP request fails (default: 30)": "Sekunden, bis eine HTTP-Anfrage fehlschlägt (Standard: 30)",
+  "Semantic Scholar academic paper search for Spora agents.": "Akademische Papersuche über Semantic Scholar für Spora-Agenten."
 }
