@@ -18,7 +18,7 @@ use Throwable;
 
 /**
  * Searches academic papers and retrieves metadata via the Semantic Scholar API.
- * Supports paper search, citations, references, and recommendations. Free, no API key required.
+ * The API needs no key, so this tool declares no `api_key` setting.
  */
 #[Tool(
     name: 'semantic_scholar',
@@ -183,11 +183,8 @@ final class SemanticScholarTool extends AbstractTool
     }
 
     /**
-     * Shared implementation for getCitations and getReferences. The two
-     * endpoints differ only in URL suffix, entry key, label, and empty-state
-     * message — the rest (limit/offset/fields/pagination) is identical.
-     *
-     * @return ToolResult
+     * Shared by getCitations and getReferences, which differ only in suffix,
+     * entry key, label and empty-state message.
      */
     private function fetchPaperRelations(array $arguments, int $agentId, ?int $userId, string $urlSuffix, string $entryKey, string $label, string $emptyMessage): ToolResult
     {
@@ -272,8 +269,8 @@ final class SemanticScholarTool extends AbstractTool
     }
 
     /**
-     * Performs a GET request and returns null on success (response data stored in $lastResponseData),
-     * or a ToolResult describing the error (HTTP failure or exception).
+     * Returns null on success, with the response body in $lastResponseData;
+     * a ToolResult describing the error otherwise.
      *
      * @param array<string, mixed> $query
      * @param array<string, mixed> $settings
