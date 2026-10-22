@@ -8,8 +8,6 @@ use Spora\Plugins\AbstractPlugin;
 use Spora\Plugins\SemanticScholar\Tools\SemanticScholarTool;
 
 /**
- * Plugin entry point for the SemanticScholar extraction.
- *
  * Semantic Scholar academic paper search for Spora agents.
  */
 final class SemanticScholarPlugin extends AbstractPlugin
@@ -24,6 +22,18 @@ final class SemanticScholarPlugin extends AbstractPlugin
     {
         return [
             SemanticScholarTool::class,
+        ];
+    }
+
+    /**
+     * The plugin's `locales/` directory — one `<lang>.json` per language.
+     *
+     * @return string[]
+     */
+    public function translationsPaths(): array
+    {
+        return [
+            __DIR__ . '/../locales',
         ];
     }
 }
